@@ -59,32 +59,43 @@ async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Ошибка обработки: {str(e)}")
 
 async def get_deepseek_summary(text: str) -> str:
-    """Запрос к DeepSeek API"""
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-    client = openai.Client(base_url="http://zeliboba.yandex-team.ru/balance/deepseek_r1/v1", api_key="EMPTY")
-    
-    custom_headers = {
-    'X-Model-Discovery-Oauth-Token': api_key,
-    'X-Model-Discovery-Enable-Client-Ping': '0'
-    }
-    prompt = f'''
-    Пожалуйста, составь краткую выжимку из непрочитанных сообщений в рабочем чате. 
-    Мне нужно узнать основную суть обсуждений, кто и с кем взаимодействовал, о чем шла речь, какие решения были приняты 
-    или какие договоренности достигнуты, и любую другую важную информацию. Опиши события кратко и понятно, акцентируя внимание на ключевых деталях. Не рассуждай. Отправь в ответ только результат:\n\n{text}
-    '''
-    response = client.chat.completions.create(
-        model="deepseek",
-        messages=[{
-            "role": "user", 
-            "content": prompt
+        """Запрос к DeepSeek API"""
+        # api_key = os.getenv("DEEPSEEK_API_KEY")
+        client = openai.Client(base_url="http://zeliboba.yandex-team.ru/balance/deepseek_r1/v1", api_key="EMPTY")
+        
+        custom_headers = {
+        'X-Model-Discovery-Oauth-Token': api_key,
+        'X-Model-Discovery-Enable-Client-Ping': '0'
+        }
+        prompt = f'''
+        Представь, что ты персональный ассистент. У твоего руководителя очень мало свободного времени и нет возможности читать все рабочие чаты. 
+        При этом он хочет быть в контексте всего происходящего.
+        Составь краткую выжимку из непрочитанных сообщений в рабочем чате. 
+        Нужно узнать основную суть обсуждений, кто и с кем взаимодействовал, о чем шла речь, какие решения были приняты 
+        или какие договоренности достигнуты, и любую другую важную информацию. Опиши события кратко и понятно, акцентируя внимание на ключевых деталях
+        Представь ответ в виде
+        Вот, что обсуждалось:
+        - Ключевые темы:
+        - Проблемы
+        - Договоренности
+        - Ключевые детали
+        :\n\n{text}
+        '''
+        response = client.chat.completions.create(
+            model="deepseek",
+            messages=[{
+                "role": "user", 
+                "content": prompt
+                },
+            ],
+        response_format={
+            'type': 'json_object'
             },
-        ],
-    temperature=0,
-    max_tokens=4096,
-    extra_headers=custom_headers
-    )
-    response.raise_for_status()
-    return response.json()['choices'][0]['message']['content']
+        temperature=0,
+        max_tokens=4096,
+        extra_headers=custom_headers
+        )
+        return response['choices'][0]['message']['content']
 
 def main():
     app = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
