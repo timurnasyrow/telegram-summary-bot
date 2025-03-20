@@ -4,6 +4,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import requests
 from dotenv import load_dotenv
+import openai
 
 load_dotenv()
 
@@ -60,22 +61,28 @@ async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_deepseek_summary(text: str) -> str:
     """Запрос к DeepSeek API"""
     api_key = os.getenv("DEEPSEEK_API_KEY")
-    url = "https://api.deepseek.com/v1/chat/completions"
+    client = openai.Client(base_url="http://zeliboba.yandex-team.ru/balance/deepseek_r1/v1", api_key="EMPTY")
     
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+    custom_headers = {
+    'X-Model-Discovery-Oauth-Token': api_key,
+    'X-Model-Discovery-Enable-Client-Ping': '0'
     }
-    
-    data = {
-        "model": "deepseek-chat",
-        "messages": [{
+    prompt = f'''
+    Пожалуйста, составь краткую выжимку из непрочитанных сообщений в рабочем чате. 
+    Мне нужно узнать основную суть обсуждений, кто и с кем взаимодействовал, о чем шла речь, какие решения были приняты 
+    или какие договоренности достигнуты, и любую другую важную информацию. Опиши события кратко и понятно, акцентируя внимание на ключевых деталях. Не рассуждай. Отправь в ответ только результат:\n\n{text}
+    '''
+    response = client.chat.completions.create(
+        model="deepseek",
+        messages=[{
             "role": "user", 
-            "content": f"Сделай структурированную выжимку на русском языке. Выдели основные темы и решения:\n\n{text}"
-        }]
-    }
-    
-    response = requests.post(url, json=data, headers=headers)
+            "content": prompt
+            },
+        ],
+    temperature=0,
+    max_tokens=4096,
+    extra_headers=custom_headers
+    )
     response.raise_for_status()
     return response.json()['choices'][0]['message']['content']
 
